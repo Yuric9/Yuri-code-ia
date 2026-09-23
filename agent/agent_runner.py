@@ -19,14 +19,29 @@ def _extract_text(value: Any) -> str:
     return text if isinstance(text, str) else ""
 
 
+def _message_text(message: Any) -> str:
+    content = getattr(message, "content", None)
+    return _extract_text(content).strip()
+
+
 def _latest_agent_text(conversation: Any) -> str:
     for event in reversed(list(conversation.state.events)):
         message = getattr(event, "llm_message", None)
-        if message is None or getattr(message, "role", None) != "assistant":
-            continue
-        content = _extract_text(getattr(message, "content", None))
-        if content.strip():
-            return content.strip()
+        if message is not None and getattr(message, "role", None) == "assistant":
+            content = _message_text(message)
+            if content:
+                return content
+
+        to_llm_message = getattr(event, "to_llm_message", None)
+        if callable(to_llm_message):
+            try:
+                message = to_llm_message()
+            except Exception:
+                continue
+            if getattr(message, "role", None) == "assistant":
+                content = _message_text(message)
+                if content:
+                    return content
     return ""
 
 
@@ -63,7 +78,11 @@ def run_agent(task: str, workspace: str | None = None) -> str:
         conversation.send_message(task)
         conversation.run()
         response = _latest_agent_text(conversation)
-        status = getattr(getattr(conversation, "state", None), "execution_status", None)
+        status = getattr(
+            getattr(conversation, "state", None),
+            "execution_status",
+            None,
+        )
         return response or f"Tarefa finalizada. Status do agente: {status or 'concluído'}."
     finally:
         close = getattr(conversation, "close", None)
