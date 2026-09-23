@@ -44,3 +44,16 @@ def test_chat_runs_agent_and_persists_messages(monkeypatch):
         {"role": "user", "content": "crie um arquivo"},
         {"role": "assistant", "content": "Tarefa concluída."},
     ]
+
+
+def test_agent_requires_api_key(monkeypatch):
+    from agent.agent_runner import AgentConfigurationError, run_agent
+
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+
+    try:
+        run_agent("teste")
+    except AgentConfigurationError as exc:
+        assert "LLM_API_KEY" in str(exc)
+    else:
+        raise AssertionError("run_agent deveria exigir LLM_API_KEY")
