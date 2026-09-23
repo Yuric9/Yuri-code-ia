@@ -35,16 +35,21 @@ def parse_repo(value: str) -> GitHubTarget:
 def _run(root: Path, *args: str) -> str:
     env = os.environ.copy()
     env.setdefault("GIT_TERMINAL_PROMPT", "0")
-    result = subprocess.run(["git", *args], cwd=root, text=True, capture_output=True, env=env)
-    output = (result.stdout + "
-" + result.stderr).strip()
+    result = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        env=env,
+    )
+    output = (result.stdout + "\n" + result.stderr).strip()
     if result.returncode:
         raise GitHubOpsError(output or f"git {' '.join(args)} falhou")
     return result.stdout.strip()
 
 
 def clone(repo: str, destination: str, ref: str | None = None) -> str:
-    """Clone a public or credentialed GitHub repository using the local Git credential setup."""
+    """Clone a public or credentialed GitHub repository using local Git credentials."""
     parse_repo(repo)
     target = Path(destination).expanduser().resolve()
     if target.exists() and any(target.iterdir()):
@@ -63,7 +68,11 @@ def status(root: str) -> str:
 
 
 def create_branch(root: str, branch: str, base: str | None = None) -> str:
-    if not re.fullmatch(r"[A-Za-z0-9._/-]+", branch) or branch.startswith("/") or branch.endswith("/"):
+    if (
+        not re.fullmatch(r"[A-Za-z0-9._/-]+", branch)
+        or branch.startswith("/")
+        or branch.endswith("/")
+    ):
         raise GitHubOpsError("Nome de branch inválido.")
     path = Path(root).expanduser().resolve()
     if base:
