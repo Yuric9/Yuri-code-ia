@@ -32,7 +32,7 @@ O banco é inicializado automaticamente quando o agente inicia.
 
 Por padrão:
 
-`.yuri-data/yuri_code_ai.db`
+`./data/yuri_ai.db` (desenvolvimento local; produção deve usar PostgreSQL/Supabase via `DATABASE_URL`).
 
 Para produção, configure `DATABASE_URL` com PostgreSQL. A camada de persistência já separa:
 
@@ -52,7 +52,7 @@ Também existe uma camada opcional com Tavily. Ela não impõe limite dentro da 
 
 1. Copie `config/.env.example` para `.env`.
 2. Configure `LLM_API_KEY` e `LLM_MODEL`.
-3. Instale as dependências.
+3. Instale as dependências base com `pip install .` e, para executar o agente OpenHands, use `pip install ".[agent]"`. Para desenvolvimento/testes, use `pip install ".[test]"`.
 4. Defina `YURI_WORKSPACE` para o projeto que a IA poderá trabalhar.
 5. Opcionalmente configure `TAVILY_API_KEY`.
 6. Execute `yuri-code-ai`.
