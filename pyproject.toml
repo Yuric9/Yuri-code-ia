@@ -25,3 +25,6 @@ test = [
 [project.scripts]
 yuri-code-ai = "agent.main:main"
 yuri-code-ai-api = "agent.api:start_api"
+
+[tool.setuptools.packages.find]
+include = ["agent*"]
