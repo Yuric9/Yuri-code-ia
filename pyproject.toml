@@ -15,7 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 agent = [
-  "openhands-sdk>=1.49.4",
+  "openhands-sdk==1.49.4",
 ]
 test = [
   "pytest>=8.0",
