@@ -1,0 +1,19 @@
+[project]
+name = "yuri-code-ai"
+version = "0.3.0"
+description = "Agente de IA para programação"
+requires-python = ">=3.11"
+dependencies = [
+  "openai>=1.0",
+  "python-dotenv>=1.0",
+  "fastapi>=0.100",
+  "uvicorn>=0.23",
+  "sqlalchemy>=2.0",
+  "pydantic>=2.0",
+  "tavily-python>=0.5",
+  "openhands-sdk>=0.1",
+]
+
+[project.scripts]
+yuri-code-ai = "agent.main:main"
+yuri-code-ai-api = "agent.api:start_api"
