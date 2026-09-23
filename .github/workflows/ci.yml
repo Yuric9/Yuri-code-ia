@@ -20,6 +20,18 @@ jobs:
       - name: Run tests
         run: pytest -q
 
+  agent-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install agent runtime
+        run: python -m pip install --upgrade pip && pip install ".[agent]"
+      - name: Validate OpenHands SDK imports
+        run: python -c "from openhands.sdk import Conversation, LLM; from openhands.tools.preset.default import get_default_agent; print('OpenHands SDK OK')"
+
   web:
     runs-on: ubuntu-latest
     defaults:
