@@ -1,13 +1,15 @@
 import os
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship, Session
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
 
-os.makedirs("data", exist_ok=True)
-DATABASE_URL = "sqlite:///./data/yuri_ai.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/yuri_ai.db")
+if DATABASE_URL.startswith("sqlite"):
+    os.makedirs("data", exist_ok=True)
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -24,13 +26,14 @@ class Conversation(Base):
     external_id = Column(String(255), unique=True, index=True, nullable=False)
     title = Column(String(255))
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True, index=True)
     role = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
-    conversation_id = Column(Integer)
+    conversation_id = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Memory(Base):
@@ -39,6 +42,14 @@ class Memory(Base):
     scope = Column(String(100), nullable=False)
     key = Column(String(255), nullable=False)
     value = Column(Text)
+
+class ResearchRecord(Base):
+    __tablename__ = "research_records"
+    id = Column(Integer, primary_key=True, index=True)
+    query = Column(Text, nullable=False)
+    url = Column(Text)
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 def init_db():
     Base.metadata.create_all(bind=engine)
@@ -71,20 +82,23 @@ def get_conversation_by_external_id(db: Session, external_id: str):
     return db.query(Conversation).filter(Conversation.external_id == external_id).first()
 
 def list_conversations(db: Session):
-    return db.query(Conversation).all()
+    return db.query(Conversation).order_by(Conversation.updated_at.desc()).all()
 
 def add_message(db: Session, conversation_id: int, role: str, content: str):
     msg = Message(conversation_id=conversation_id, role=role, content=content)
     db.add(msg)
+    conv = db.get(Conversation, conversation_id)
+    if conv:
+        conv.updated_at = datetime.utcnow()
     db.commit()
+    db.refresh(msg)
     return msg
 
 def get_messages(db: Session, conversation_id: int):
-    return db.query(Message).filter(Message.conversation_id == conversation_id).all()
+    return db.query(Message).filter(Message.conversation_id == conversation_id).order_by(Message.created_at.asc()).all()
 
 def remember(db: Session, scope: str, key: str, value: str):
-    from sqlalchemy import and_
-    mem = db.query(Memory).filter(and_(Memory.scope == scope, Memory.key == key)).first()
+    mem = db.query(Memory).filter(Memory.scope == scope, Memory.key == key).first()
     if mem:
         mem.value = value
     else:
@@ -93,21 +107,25 @@ def remember(db: Session, scope: str, key: str, value: str):
     db.commit()
 
 def recall(db: Session, scope: str, key: str):
-    from sqlalchemy import and_
-    mem = db.query(Memory).filter(and_(Memory.scope == scope, Memory.key == key)).first()
+    mem = db.query(Memory).filter(Memory.scope == scope, Memory.key == key).first()
     return mem.value if mem else None
 
 def list_memories(db: Session, scope: str = None):
     q = db.query(Memory)
     if scope:
         q = q.filter(Memory.scope == scope)
-    return q.all()
+    return q.order_by(Memory.id.desc()).all()
 
 def forget(db: Session, scope: str, key: str):
-    from sqlalchemy import and_
-    mem = db.query(Memory).filter(and_(Memory.scope == scope, Memory.key == key)).first()
+    mem = db.query(Memory).filter(Memory.scope == scope, Memory.key == key).first()
     if mem:
         db.delete(mem)
         db.commit()
         return True
     return False
+
+def log_research(db: Session, query: str, url: str = None, content: str = None):
+    record = ResearchRecord(query=query, url=url, content=content)
+    db.add(record)
+    db.commit()
+    return record
