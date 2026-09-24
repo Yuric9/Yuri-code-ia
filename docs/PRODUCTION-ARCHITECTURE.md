@@ -59,6 +59,14 @@ SQLite é permitido somente para desenvolvimento local. Produção exige Postgre
 7. Teste de persistência: criar uma conversa e confirmar que mensagens permanecem após nova requisição.
 8. Só então promover o deployment para produção.
 
+## Readiness e observabilidade
+
+- `GET /health` é o health check público de liveness e testa a conexão PostgreSQL.
+- `GET /ready` exige Bearer token e verifica dependências necessárias para operar o agente.
+- O readiness retorna somente indicadores booleanos (`true/false`), nunca valores de secrets.
+- Em produção, o readiness também exige sandbox `docker` ou `remote`; no modo `remote`, exige `OPENHANDS_AGENT_SERVER_URL`.
+- Um `503` em `ready` significa que o deployment está vivo, mas ainda não está apto a processar tarefas.
+
 ## Segurança
 
 - Nunca commitar `.env`, tokens, chaves ou URLs com credenciais.
