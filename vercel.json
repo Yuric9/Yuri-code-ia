@@ -1,5 +1,30 @@
 {
-  "framework": "nextjs",
-  "installCommand": "npm install",
-  "buildCommand": "npm run build"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "frontend": {
+      "root": "web/",
+      "framework": "nextjs",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "backend",
+          "format": "url",
+          "env": "BACKEND_INTERNAL_URL"
+        }
+      ]
+    },
+    "backend": {
+      "root": "agent/",
+      "framework": "fastapi",
+      "entrypoint": "api:app"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ]
 }
