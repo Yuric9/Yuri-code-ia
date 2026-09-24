@@ -2,55 +2,67 @@
 
 ## Objetivo
 
-Separar claramente a interface web, a API do agente e a persistência, evitando acoplamento entre o deploy Next.js e o processo Python de longa duração.
+Executar o frontend Next.js e a API FastAPI no mesmo projeto Vercel, com o backend consumido internamente pelo frontend, e usar PostgreSQL/Supabase para persistência.
 
 ## Componentes
 
-- **Web:** Next.js App Router em \`/web\`, hospedado na Vercel.
-- **API do agente:** FastAPI/Python em \`/agent\`. Deve ser hospedada em um runtime Python persistente/compatível com o SDK do agente.
+- **Web:** Next.js App Router em `/web`.
+- **API do agente:** FastAPI/Python em `/agent`.
 - **Banco:** PostgreSQL/Supabase em produção.
-- **Pesquisa:** BrowserToolSet/OpenHands e Tavily opcional.
-- **GitHub:** integração do agente para operações autorizadas no repositório.
+- **Pesquisa:** OpenHands/BrowserToolSet e Tavily opcional.
+- **GitHub:** integração do agente para operações autorizadas.
 
 ## Fluxo
 
-Browser -> Next.js -> \`/api/chat\` -> FastAPI -> OpenHands/LLM -> ferramentas -> PostgreSQL.
+Browser -> Next.js -> `/api/chat` -> binding `BACKEND_INTERNAL_URL` -> FastAPI -> OpenHands/LLM -> PostgreSQL.
 
-O navegador não deve acessar diretamente credenciais de LLM, GitHub ou banco.
+O navegador nunca recebe credenciais de LLM, GitHub ou banco.
 
-## Variáveis essenciais
+## Variáveis de produção
 
-### Vercel
+### Vercel — frontend/backend
 
-- \`YURI_AGENT_API_URL\`: URL pública da API Python.
-- Variáveis públicas devem ser usadas somente quando realmente destinadas ao browser; a URL acima é consumida pelo Route Handler do Next.js.
+Configure como variáveis privadas do projeto, sem valores no Git:
 
-### Backend
+- `YURI_API_TOKEN`
+- `LLM_API_KEY`
+- `LLM_MODEL`
+- `LLM_BASE_URL` (se necessário)
+- `YURI_ENV=production`
+- `YURI_SANDBOX_MODE=remote`
+- `OPENHANDS_AGENT_SERVER_URL`
+- `OPENHANDS_AGENT_SERVER_API_KEY`
+- `DATABASE_URL`
+- `CORS_ORIGINS` (domínio oficial, quando necessário)
+- `YURI_WORKSPACE`
+- `TAVILY_API_KEY` (opcional)
+- `YURI_MAX_ITERATIONS`, `YURI_TASK_TIMEOUT_SECONDS`, `YURI_MAX_COST_USD` conforme os limites desejados.
 
-- \`LLM_API_KEY\`
-- \`LLM_MODEL\`
-- \`DATABASE_URL\`
-- \`CORS_ORIGINS\`
-- \`YURI_WORKSPACE\`
-- \`TAVILY_API_KEY\` (opcional)
+`BACKEND_INTERNAL_URL` é criado pelo binding do Vercel Services e não deve ser digitado manualmente.
 
 ## Banco
 
-SQLite é permitido somente para desenvolvimento local. Produção deve usar PostgreSQL/Supabase e \`DATABASE_URL\`.
+SQLite é permitido somente para desenvolvimento local. Produção exige PostgreSQL/Supabase. O endpoint `/health` testa também a conectividade do banco e informa `database=ok` ou `database=degraded`.
 
-## Deploy
+## Sandbox do agente
 
-1. Validar Python e TypeScript.
-2. Executar testes.
-3. Criar preview da Web.
-4. Validar \`/api/chat\` contra a API Python.
-5. Configurar PostgreSQL/Supabase.
-6. Validar health check e persistência.
-7. Somente depois promover para produção.
+`YURI_SANDBOX_MODE=local` não é aceito para produção. Para executar o OpenHands em produção, use um Agent Server remoto compatível e configure `OPENHANDS_AGENT_SERVER_URL` e `OPENHANDS_AGENT_SERVER_API_KEY`.
+
+## Validação antes de produção
+
+1. CI verde.
+2. Deployment Vercel Ready.
+3. Variáveis privadas configuradas.
+4. PostgreSQL/Supabase acessível pelo backend.
+5. `GET /health` retorna `status=ok` e `database=ok`.
+6. Teste autenticado de `POST /chat`.
+7. Teste de persistência: criar uma conversa e confirmar que mensagens permanecem após nova requisição.
+8. Só então promover o deployment para produção.
 
 ## Segurança
 
-- Nunca commitar \`.env\`, tokens ou chaves.
-- Nunca expor \`LLM_API_KEY\`, credenciais do GitHub ou \`DATABASE_URL\` no cliente.
-- Restringir \`CORS_ORIGINS\` em produção.
-- O workspace do agente deve ser explicitamente configurado e isolado.
+- Nunca commitar `.env`, tokens, chaves ou URLs com credenciais.
+- Nunca expor `LLM_API_KEY`, credenciais do GitHub ou `DATABASE_URL` ao browser.
+- Restringir CORS.
+- Manter o workspace do agente isolado.
+- Em produção, não usar SQLite nem sandbox local.

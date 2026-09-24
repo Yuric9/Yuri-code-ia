@@ -17,13 +17,14 @@ from .database import (
     add_message, create_conversation, create_project, forget,
     get_conversation_by_external_id, get_db, get_messages, init_db,
     list_conversations, list_memories, list_projects, recall, remember,
+    engine,
 )
 from .quality_gate import run_quality_gate
 from .web_research import search_web
 
 load_dotenv()
 init_db()
-app = FastAPI(title="Yuri Code AI API", version="0.14.0")
+app = FastAPI(title="Yuri Code AI API", version="0.15.0")
 cors_value = os.getenv("CORS_ORIGINS", "").strip()
 origins = [item.strip() for item in cors_value.split(",") if item.strip()]
 app.add_middleware(
@@ -85,7 +86,14 @@ class QualityGateRequest(BaseModel):
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "Yuri Code AI", "version": app.version}
+    database = "ok"
+    try:
+        with engine.connect() as connection:
+            connection.exec_driver_sql("SELECT 1")
+    except Exception:
+        database = "degraded"
+    status = "ok" if database == "ok" else "degraded"
+    return {"status": status, "service": "Yuri Code AI", "version": app.version, "database": database}
 
 @app.get("/projects")
 def get_projects(db=Depends(get_db)):
@@ -119,9 +127,7 @@ async def chat(request: ChatRequest, db=Depends(get_db)):
     add_message(db, conv.id, "user", message)
     try:
         timeout = os.getenv("YURI_TASK_TIMEOUT_SECONDS", "").strip()
-        work = asyncio.to_thread(
-            run_agent, message, os.getenv("YURI_WORKSPACE", "./workspace"), conv_id
-        )
+        work = asyncio.to_thread(run_agent, message, os.getenv("YURI_WORKSPACE", "./workspace"), conv_id)
         response = await asyncio.wait_for(work, timeout=float(timeout)) if timeout else await work
     except AgentConfigurationError as exc:
         raise HTTPException(503, str(exc)) from exc
@@ -169,11 +175,7 @@ def quality_gate(request: QualityGateRequest):
         raise HTTPException(400, str(exc)) from exc
 
 def start_api():
-    uvicorn.run(
-        app,
-        host=os.getenv("YURI_API_HOST", "0.0.0.0"),
-        port=int(os.getenv("YURI_API_PORT", 8000)),
-    )
+    uvicorn.run(app, host=os.getenv("YURI_API_HOST", "0.0.0.0"), port=int(os.getenv("YURI_API_PORT", 8000)))
 
 if __name__ == "__main__":
     start_api()
