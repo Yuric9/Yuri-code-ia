@@ -85,27 +85,44 @@ class ResearchRequest(BaseModel):
 class QualityGateRequest(BaseModel):
     repository: str = Field(default=".", min_length=1, max_length=255)
 
-@app.get("/health")
-def health_check():
-    database = "ok"
+REQUIRED_TABLES = {"projects", "conversations", "messages", "memories", "research_records"}
+
+
+def _database_ready() -> bool:
     try:
         with engine.connect() as connection:
             connection.exec_driver_sql("SELECT 1")
+            if connection.dialect.name == "sqlite":
+                rows = connection.exec_driver_sql(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+                tables = {row[0] for row in rows}
+            else:
+                rows = connection.exec_driver_sql(
+                    """
+                    SELECT table_name
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                    """
+                ).fetchall()
+                tables = {row[0] for row in rows}
+            return REQUIRED_TABLES.issubset(tables)
     except Exception:
-        database = "degraded"
+        return False
+
+
+@app.get("/health")
+def health_check():
+    database = "ok" if _database_ready() else "degraded"
     status = "ok" if database == "ok" else "degraded"
     return {"status": status, "service": "Yuri Code AI", "version": app.version, "database": database}
+
 
 @app.get("/ready")
 def readiness_check():
     """Protected readiness check; never exposes secret values."""
     environment = os.getenv("YURI_ENV", "development").strip().lower()
-    try:
-        with engine.connect() as connection:
-            connection.exec_driver_sql("SELECT 1")
-            database_ok = True
-    except Exception:
-        database_ok = False
+    database_ok = _database_ready()
     checks = {
         "database": database_ok,
         "api_token": bool(os.getenv("YURI_API_TOKEN", "").strip()),
@@ -161,7 +178,7 @@ async def chat(request: ChatRequest, db=Depends(get_db)):
     except asyncio.TimeoutError as exc:
         raise HTTPException(504, "Tempo limite configurável da tarefa atingido.") from exc
     except Exception as exc:
-        add_message(db, conv.id, "assistant", f"Erro do agente: {exc}")
+        add_message(db, conv.id, "assistant", "Erro interno do agente ao processar a tarefa.")
         raise HTTPException(502, "O agente falhou ao processar a tarefa.") from exc
     add_message(db, conv.id, "assistant", response)
     return {"conversation_id": conv_id, "session_id": conv_id, "response": response, "message": response}
