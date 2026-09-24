@@ -90,3 +90,24 @@ def test_research_without_provider_is_graceful(monkeypatch):
     )
     assert response.status_code == 200
     assert response.json()["enabled"] is False
+
+
+def test_readiness_requires_authentication():
+    response = client.get("/ready")
+    assert response.status_code == 401
+
+
+def test_readiness_reports_missing_production_configuration(monkeypatch):
+    monkeypatch.setenv("YURI_ENV", "production")
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.setenv("YURI_SANDBOX_MODE", "remote")
+    monkeypatch.delenv("OPENHANDS_AGENT_SERVER_URL", raising=False)
+    response = client.get("/ready", headers=AUTH)
+    assert response.status_code == 503
+    payload = response.json()
+    assert payload["status"] == "not_ready"
+    assert payload["checks"]["database"] is True
+    assert payload["checks"]["llm"] is False
+    assert payload["checks"]["sandbox"] is True
+    assert payload["checks"]["openhands_server"] is False
+    assert "LLM_API_KEY" not in response.text
