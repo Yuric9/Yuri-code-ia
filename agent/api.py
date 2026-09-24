@@ -12,18 +12,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from agent.agent_runner import AgentConfigurationError, run_agent
-from agent.database import (
+from .agent_runner import AgentConfigurationError, run_agent
+from .database import (
     add_message, create_conversation, create_project, forget,
     get_conversation_by_external_id, get_db, get_messages, init_db,
     list_conversations, list_memories, list_projects, recall, remember,
 )
-from agent.quality_gate import run_quality_gate
-from agent.web_research import search_web
+from .quality_gate import run_quality_gate
+from .web_research import search_web
 
 load_dotenv()
 init_db()
-app = FastAPI(title="Yuri Code AI API", version="0.13.0")
+app = FastAPI(title="Yuri Code AI API", version="0.14.0")
 cors_value = os.getenv("CORS_ORIGINS", "").strip()
 origins = [item.strip() for item in cors_value.split(",") if item.strip()]
 app.add_middleware(

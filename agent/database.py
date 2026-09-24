@@ -1,9 +1,16 @@
 import os
 from datetime import datetime
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 
+load_dotenv()
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/yuri_ai.db")
+if os.getenv("YURI_ENV", "development").strip().lower() == "production" and DATABASE_URL.startswith("sqlite"):
+    raise RuntimeError("Produção exige DATABASE_URL apontando para PostgreSQL ou outro banco gerenciado; SQLite não é suportado.")
+
 if DATABASE_URL.startswith("sqlite"):
     os.makedirs("data", exist_ok=True)
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})

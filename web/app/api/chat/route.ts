@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
-const agentUrl = process.env.YURI_AGENT_API_URL?.replace(/\/$/, "");
+export const maxDuration = 300;
+
+const agentUrl = (
+  process.env.BACKEND_INTERNAL_URL ??
+  process.env.YURI_AGENT_API_URL
+)?.replace(/\/$/, "");
 const agentToken = process.env.YURI_API_TOKEN;
 
 type AgentResponse = { session_id?: string; conversation_id?: string; message?: string; response?: string };
@@ -10,12 +15,12 @@ export async function POST(request: Request) {
   const message = typeof body.message === "string" ? body.message.trim() : "";
   const sessionId = typeof body.session_id === "string" ? body.session_id : undefined;
   if (!message) return NextResponse.json({ message: "Envie uma tarefa para o agente." }, { status: 400 });
-  if (!agentUrl) return NextResponse.json({ message: "Backend não configurado. Defina YURI_AGENT_API_URL." }, { status: 503 });
+  if (!agentUrl) return NextResponse.json({ message: "Backend não configurado. O serviço FastAPI não foi vinculado." }, { status: 503 });
   if (!agentToken) return NextResponse.json({ message: "Token do backend não configurado no servidor." }, { status: 503 });
   try {
     const response = await fetch(agentUrl + "/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${agentToken}` },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + agentToken },
       body: JSON.stringify({ message, session_id: sessionId }),
       cache: "no-store",
     });

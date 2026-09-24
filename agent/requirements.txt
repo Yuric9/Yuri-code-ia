@@ -1,0 +1,10 @@
+openai>=1.0
+python-dotenv>=1.0
+fastapi>=0.100
+uvicorn>=0.23
+sqlalchemy>=2.0
+pydantic>=2.0
+tavily-python>=0.5
+openhands-sdk==1.49.4
+openhands-tools==1.49.4
+openhands-workspace==1.49.4
