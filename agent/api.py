@@ -23,7 +23,8 @@ from .quality_gate import run_quality_gate
 from .web_research import search_web
 
 load_dotenv()
-init_db()
+if os.getenv("YURI_ENV", "development").strip().lower() != "production":
+    init_db()
 app = FastAPI(title="Yuri Code AI API", version="0.15.0")
 cors_value = os.getenv("CORS_ORIGINS", "").strip()
 origins = [item.strip() for item in cors_value.split(",") if item.strip()]
