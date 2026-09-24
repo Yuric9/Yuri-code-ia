@@ -111,3 +111,26 @@ def test_readiness_reports_missing_production_configuration(monkeypatch):
     assert payload["checks"]["sandbox"] is True
     assert payload["checks"]["openhands_server"] is False
     assert "LLM_API_KEY" not in response.text
+
+
+def test_health_checks_required_schema():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["database"] == "ok"
+
+
+def test_chat_does_not_persist_internal_exception_details(monkeypatch):
+    def failing_run_agent(task, workspace=None, conversation_id="default"):
+        raise RuntimeError("secret internal implementation detail")
+
+    monkeypatch.setattr(api, "run_agent", failing_run_agent)
+    response = client.post(
+        "/chat",
+        json={"message": "falhe", "session_id": "error-session"},
+        headers=AUTH,
+    )
+    assert response.status_code == 502
+    assert "secret internal implementation detail" not in response.text
+    messages = client.get("/conversations/error-session/messages", headers=AUTH)
+    assert messages.status_code == 200
+    assert messages.json()[-1]["content"] == "Erro interno do agente ao processar a tarefa."
