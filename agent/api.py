@@ -96,6 +96,32 @@ def health_check():
     status = "ok" if database == "ok" else "degraded"
     return {"status": status, "service": "Yuri Code AI", "version": app.version, "database": database}
 
+@app.get("/ready")
+def readiness_check():
+    """Protected readiness check; never exposes secret values."""
+    environment = os.getenv("YURI_ENV", "development").strip().lower()
+    try:
+        with engine.connect() as connection:
+            connection.exec_driver_sql("SELECT 1")
+            database_ok = True
+    except Exception:
+        database_ok = False
+    checks = {
+        "database": database_ok,
+        "api_token": bool(os.getenv("YURI_API_TOKEN", "").strip()),
+        "llm": bool(os.getenv("LLM_API_KEY", "").strip()),
+    }
+    if environment == "production":
+        sandbox = os.getenv("YURI_SANDBOX_MODE", "").strip().lower()
+        checks["sandbox"] = sandbox in {"docker", "remote"}
+        if sandbox == "remote":
+            checks["openhands_server"] = bool(os.getenv("OPENHANDS_AGENT_SERVER_URL", "").strip())
+    ready = all(checks.values())
+    return JSONResponse(
+        {"status": "ready" if ready else "not_ready", "environment": environment, "checks": checks},
+        status_code=200 if ready else 503,
+    )
+
 @app.get("/projects")
 def get_projects(db=Depends(get_db)):
     return [{"id": p.id, "name": p.name, "description": p.description} for p in list_projects(db)]
