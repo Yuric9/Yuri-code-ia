@@ -15,6 +15,7 @@
     },
     "backend": {
       "root": "agent/",
+      "framework": "fastapi",
       "entrypoint": "api:app"
     }
   },
