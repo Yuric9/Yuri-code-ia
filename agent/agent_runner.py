@@ -68,7 +68,7 @@ def run_agent(task: str, workspace: str | None = None, conversation_id: str = "d
     try:
         from pydantic import SecretStr
         from openhands.sdk import Conversation, LLM
-        from openhands.tools.preset.default import get_default_agent
+        from openhands.sdk.preset.default import get_default_agent
     except ImportError as exc:
         raise AgentConfigurationError("OpenHands SDK/Workspace não está instalado corretamente.") from exc
     max_iterations = _optional_number("YURI_MAX_ITERATIONS", int)
