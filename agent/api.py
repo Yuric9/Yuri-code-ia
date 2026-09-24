@@ -12,15 +12,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from .agent_runner import AgentConfigurationError, run_agent
-from .database import (
-    add_message, create_conversation, create_project, forget,
-    get_conversation_by_external_id, get_db, get_messages, init_db,
-    list_conversations, list_memories, list_projects, recall, remember,
-    engine,
-)
-from .quality_gate import run_quality_gate
-from .web_research import search_web
+try:
+    from .agent_runner import AgentConfigurationError, run_agent
+    from .database import (
+        add_message, create_conversation, create_project, forget,
+        get_conversation_by_external_id, get_db, get_messages, init_db,
+        list_conversations, list_memories, list_projects, recall, remember,
+        engine,
+    )
+    from .quality_gate import run_quality_gate
+    from .web_research import search_web
+except ImportError:
+    # Vercel services load the configured FastAPI entrypoint as a top-level module.
+    # Keep package-relative imports for local execution and support that deployment mode.
+    from agent_runner import AgentConfigurationError, run_agent
+    from database import (
+        add_message, create_conversation, create_project, forget,
+        get_conversation_by_external_id, get_db, get_messages, init_db,
+        list_conversations, list_memories, list_projects, recall, remember,
+        engine,
+    )
+    from quality_gate import run_quality_gate
+    from web_research import search_web
 
 load_dotenv()
 if os.getenv("YURI_ENV", "development").strip().lower() != "production":

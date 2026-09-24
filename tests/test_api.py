@@ -1,3 +1,5 @@
+import sys
+import subprocess
 import os
 
 os.environ["DATABASE_URL"] = "sqlite:///./data/test_api.db"
@@ -134,3 +136,19 @@ def test_chat_does_not_persist_internal_exception_details(monkeypatch):
     messages = client.get("/conversations/error-session/messages", headers=AUTH)
     assert messages.status_code == 200
     assert messages.json()[-1]["content"] == "Erro interno do agente ao processar a tarefa."
+
+
+def test_fastapi_entrypoint_supports_top_level_import():
+    env = os.environ.copy()
+    env["YURI_ENV"] = "development"
+    env["DATABASE_URL"] = "sqlite:///./data/test_api_top_level.db"
+    env["PYTHONPATH"] = ""
+    result = subprocess.run(
+        [sys.executable, "-c", "import api; assert api.app.title == 'Yuri Code AI API'"],
+        cwd="agent",
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
