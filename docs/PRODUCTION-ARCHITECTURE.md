@@ -48,7 +48,7 @@ SQLite é permitido somente para desenvolvimento local. Produção exige Postgre
 
 `YURI_SANDBOX_MODE=local` não é aceito para produção. Para executar o OpenHands em produção, use um Agent Server remoto compatível e configure `OPENHANDS_AGENT_SERVER_URL` e `OPENHANDS_AGENT_SERVER_API_KEY`.
 
-## Validação antes de produção
+## Migração PostgreSQL\n\nO baseline SQL em `supabase/migrations/20260924000000_initial_schema.sql` reproduz o schema persistido pelo backend. Aplique-o uma vez no PostgreSQL/Supabase de produção antes do teste de persistência. Não coloque a `DATABASE_URL` no repositório.\n\n## Validação antes de produção
 
 1. CI verde.
 2. Deployment Vercel Ready.
