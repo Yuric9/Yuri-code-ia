@@ -1,8 +1,17 @@
+"""Interactive CLI for Yuri Code AI."""
 import os
 
 from dotenv import load_dotenv
 
-from agent.database import add_message, create_conversation, create_project, get_db, init_db
+from agent.agent_runner import AgentConfigurationError, run_agent
+from agent.database import (
+    add_message,
+    create_conversation,
+    create_project,
+    get_db,
+    init_db,
+    remember,
+)
 
 load_dotenv()
 init_db()
@@ -11,14 +20,17 @@ init_db()
 def main() -> None:
     workspace = os.getenv("YURI_WORKSPACE", "./workspace")
     os.makedirs(workspace, exist_ok=True)
+    conversation_id = os.getenv("YURI_CLI_CONVERSATION_ID", "cli-session")
 
     db = next(get_db())
     try:
-        project = create_project(db, os.getenv("YURI_PROJECT_NAME", "Yuri-Code-AI"), workspace)
-        conv = create_conversation(db, "cli-session", project_id=project.id)
+        project = create_project(
+            db, os.getenv("YURI_PROJECT_NAME", "Yuri-Code-AI"), workspace
+        )
+        conv = create_conversation(db, conversation_id, project_id=project.id)
 
-        print("🤖 Yuri Code AI v0.11.0 — Modo Interativo")
-        print("Digite sua pergunta ou 'sair' para encerrar\n")
+        print("🤖 Yuri Code AI — CLI")
+        print("Digite uma tarefa para o agente ou 'sair' para encerrar.\n")
 
         while True:
             try:
@@ -30,7 +42,16 @@ def main() -> None:
                     continue
 
                 add_message(db, conv.id, "user", user_input)
-                resposta = f"Recebido: {user_input}"
+                try:
+                    resposta = run_agent(
+                        user_input,
+                        workspace=workspace,
+                        conversation_id=conversation_id,
+                    )
+                except AgentConfigurationError as exc:
+                    resposta = f"Configuração do agente: {exc}"
+                except Exception as exc:
+                    resposta = f"Erro do agente: {exc}"
                 add_message(db, conv.id, "assistant", resposta)
                 print(f"\nIA > {resposta}\n")
             except KeyboardInterrupt:
