@@ -30,7 +30,7 @@ jobs:
       - name: Install agent runtime
         run: python -m pip install --upgrade pip && pip install ".[agent]"
       - name: Validate OpenHands SDK imports
-        run: python -c "from openhands.sdk import Conversation, LLM; from openhands.sdk.preset.default import get_default_agent; print('OpenHands SDK OK')"
+        run: python -c "from openhands.sdk import Conversation, LLM; from openhands.tools.preset.default import get_default_agent; print('OpenHands SDK OK')"
       - name: Validate agent construction
         env:
           LLM_API_KEY: ci-placeholder-key
@@ -40,7 +40,7 @@ jobs:
           import os
           from pydantic import SecretStr
           from openhands.sdk import LLM
-          from openhands.sdk.preset.default import get_default_agent
+          from openhands.tools.preset.default import get_default_agent
 
           llm = LLM(
               usage_id="ci-validation",
