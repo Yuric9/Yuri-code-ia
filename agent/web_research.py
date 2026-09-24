@@ -3,7 +3,11 @@ from __future__ import annotations
 
 import os
 
-from .database import get_db, log_research
+try:
+    from .database import get_db, log_research
+except ImportError:
+    # Support Vercel's top-level FastAPI service entrypoint as well as package imports.
+    from database import get_db, log_research
 
 
 def search_web(query: str, max_results: int = 10) -> dict:
